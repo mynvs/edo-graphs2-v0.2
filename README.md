@@ -5,7 +5,7 @@
 ### installation
 
 1. clone github repository:
-   	- run \``git clone https://github.com/mynvs/EDO-graphs`\`
+   	- run \``git clone https://github.com/mynvs/edo-graphs2-v0.2`\`
    	- or download .zip file
 
 2. install required libraries:

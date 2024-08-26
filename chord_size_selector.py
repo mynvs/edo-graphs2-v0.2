@@ -21,6 +21,8 @@ BLUE = (0, 100, 255)
 SELECTED_BG = (50, 50, 0)
 SLIDER_COLOR = (230, 217, 217)
 
+GENERATE_Y_OFFSET = 0
+
 
 CHARACTERS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 CHAR_TO_VALUE = {char: index for index, char in enumerate(CHARACTERS)}
@@ -50,32 +52,32 @@ class ChordSizeSelector:
         self.setup_state()
         self.generate_and_save_chord_sizes()
         self.load_chord_sizes()
-        self.scroll_offset = 0  # Initialize scroll offset
-        self.max_scroll_offset = 0  # Initialize max scroll offset
+        self.scroll_offset = 0
+        self.max_scroll_offset = 0 
         self.old_button_index = 0
-        self.draw()  # Initial render
+        self.draw()
 
     def setup_constants(self):
         self.margin, self.selector_height, self.region_height = 10, 20, 25
         self.min_button_width, self.top_margin, self.label_height = 13, 10, 20
         self.CHAR_WIDTH, self.BINARY_SQUARE_SIZE = 11, 15
-        self.labels = ["edo", "chord sizes", "rotations", "interval variations",
-                       "NOT chord sizes", "NOT rotations", "NOT interval variations"]
-        self.slider_height = 7  # Height of the quantized slider
+        self.labels = ["edo", "shapes", "rotations", "interval variations",
+                       "NOT shapes", "NOT rotations", "NOT interval variations"]
+        self.slider_height = 8  # Height of the quantized slider
 
     def setup_fonts(self):
         font_path = os.path.join('assets', 'JetBrainsMono-Regular.otf')
         self.font = pygame.font.Font(font_path, 18)
         self.label_font = pygame.font.Font(font_path, 14)
         self.selector_font = pygame.font.Font(font_path, 14)
-        self.print_button_font = pygame.font.Font(font_path, 15)  # Smaller font for print button
+        self.print_button_font = pygame.font.Font(font_path, 15)
 
     def setup_state(self):
         self.dragging = False
         self.drag_start = self.drag_end = self.active_region = self.mouse_down_pos = None
         self.symbols = self.chord_sizes = self.chord_states1 = self.chord_states2 = []
         self.pending_edo_update = None
-        self.slider_positions = {1: None, 4: None}  # Initialize slider positions for rows 1 and 4
+        self.slider_positions = {1: None, 4: None}
         self.dragging_slider = None
 
     def create_selector_panel(self):
@@ -113,7 +115,7 @@ class ChordSizeSelector:
                 adjusted_x = x
                 region = self.create_region(adjusted_x, y, adjusted_width, self.region_height, label, i in [1, 4], i in [2, 5])
                 if i in [1, 4]:
-                    region["slider_rect"] = pygame.Rect(adjusted_x, y + self.label_height + self.region_height, adjusted_width, self.slider_height)
+                    region["slider_rect"] = pygame.Rect(adjusted_x, y + self.label_height + self.region_height - 1, adjusted_width, self.slider_height)
                 self.regions.append(region)
 
     def create_region(self, x, y, width, height, label, is_extended, is_rotations):
@@ -131,7 +133,7 @@ class ChordSizeSelector:
         print_text = self.print_button_font.render("generate", True, WHITE)
         print_rect = print_text.get_rect()
         print_rect.centerx = self.left_region_width + (self.width - self.left_region_width) // 2
-        print_rect.bottom = self.height - 5
+        print_rect.bottom = self.height - GENERATE_Y_OFFSET
         self.print_button = {"rect": print_rect, "label": "generate"}
 
     def update_selector_rects(self):
@@ -208,8 +210,8 @@ class ChordSizeSelector:
                 break
 
             # Check if the click is on a slider
-            if region["label"] in ["chord sizes", "NOT chord sizes"]:
-                row = 1 if region["label"] == "chord sizes" else 4
+            if region["label"] in ["shapes", "NOT shapes"]:
+                row = 1 if region["label"] == "shapes" else 4
                 if region["slider_rect"].collidepoint(pos):
                     self.dragging_slider = row
                     self.handle_slider_drag(pos, row)
@@ -278,9 +280,8 @@ class ChordSizeSelector:
                 text_rect = text_surf.get_rect(center=button["rect"].center)
                 self.screen.blit(text_surf, text_rect)
 
-            # Draw slider for rows 1 and 4
-            if region["label"] in ["chord sizes", "NOT chord sizes"]:
-                row = 1 if region["label"] == "chord sizes" else 4
+            if region["label"] in ["shapes", "NOT shapes"]:
+                row = 1 if region["label"] == "shapes" else 4
                 pygame.draw.rect(self.screen, GRAY, region["slider_rect"])
                 
                 chord_states = self.chord_states1 if row == 1 else self.chord_states2
@@ -321,22 +322,13 @@ class ChordSizeSelector:
                 self.handle_resize(event.size)
 
         if self.pending_edo_update is not None:
-            # Clear binaries first
             self.symbols = []
-
-            # Then update the EDO and layout
             self.selector_panel["selected"] = self.pending_edo_update
             self.update_layout()
             self.generate_and_save_chord_sizes()
             self.pending_edo_update = None
-
-            # Disable sliders when EDO is changed
             self.slider_positions = {1: None, 4: None}
-
-            # Reset scroll offset
             self.scroll_offset = 0
-
-            # Force a redraw
             self.draw()
 
         return True
@@ -344,7 +336,7 @@ class ChordSizeSelector:
     def handle_mouse_up(self, pos):
         if self.dragging and self.active_region:
             self.apply_drag_selection()
-        elif self.mouse_down_pos == pos:  # Only handle click if mouse hasn't moved
+        elif self.mouse_down_pos == pos:
             self.handle_click(pos)
 
         self.reset_drag_state()
@@ -449,12 +441,8 @@ class ChordSizeSelector:
         os.system("python edo_graphs2.py")
         self.load_symbols()
 
-        # Disable sliders when "generate" is pressed
         self.slider_positions = {1: None, 4: None}
-        
-        # Reset scroll offset
         self.scroll_offset = 0
-
         self.draw()
 
     def update_layout(self):

@@ -1,6 +1,5 @@
 from itertools import combinations
 from settings import *
-import json
 
 CHARACTERS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 CHAR_TO_VALUE = {char: index for index, char in enumerate(CHARACTERS)}
@@ -116,51 +115,23 @@ def all_rotations(input_data):
             rotations = [binary[i:] + binary[:i] for i in range(len(binary))]
             list_of_chords.extend(rotations)
     else:
-        raise ValueError("Input must be a string or a list of strings")
+        raise ValueError("input must be a string or a list of strings")
 
     return list_of_chords
 
-def print_symbols(list_of_chords, reduce_relative=False, truncate_relative=False, absolute_smallest=True):
-    list_of_chords = sorted(list_of_chords, key=lambda x: int(x, 2))
-    A = len(list_of_chords[0])+2, 14
-    s = [' '*len(str(len(list_of_chords))), ' '*(A[0]-len('actual')),' '*(A[0]-len('smallest')),' '*(A[1]-len('absol')),' '*(A[1]-len('rel'))]
-    print(f'i{s[0]}actual{s[1]}smallest{s[2]}absol{s[3]}rel')
-    for e, i in enumerate(list_of_chords):
-        # e += 1
-        binary, key = smallest_rotation(i)
-        if absolute_smallest:
-            positions = binary_to_positions(binary)
-            absolute = positions[::-1] + '.'+key
-        else:
-            positions = binary_to_positions(i)
-            absolute = positions[::-1]
-        gaps = binary_to_gap_lengths(binary, reduce_relative)
 
-        actual = i[::-1]
-        smallest = binary[::-1]
-        
-        realtive = (gaps[::-1][:-1] if truncate_relative else gaps[::-1]) + '.'+key
-        key = key
-
-        s = [' '*(len(str(len(list_of_chords)))-len(str(e))),' '*(A[0]-len(actual)),' '*(A[0]-len(smallest)),' '*(A[1]-len(absolute)),' '*(A[1]-len(realtive))]
-        print(f"{e} {s[0]}{actual}{s[1]}{smallest}{s[2]}{absolute}{s[3]}{realtive}{s[4]}")
-
-def generate_symbols(list_of_chords, reduce_relative=False, truncate_relative=False, absolute_smallest=True, style='actual'):
+def generate_symbols(list_of_chords, reduce_relative=False, truncate_relative=False, absolute_smallest=False, style='actual'):
     list_of_chords = sorted(list_of_chords, key=lambda x: int(x, 2))
     output_list = []
-
-    for e, i in enumerate(list_of_chords):
-
-        # e += 1
-        binary, key = smallest_rotation(i)
-        
-        key = key
+    for i in list_of_chords:
         if style == 'relative':
+            binary, key = smallest_rotation(i)
             gaps = binary_to_gap_lengths(binary, reduce_relative)
             relative = (gaps[::-1][:-1] if truncate_relative else gaps[::-1]) + '.'+key
             output_list.append(relative)
         elif style == 'absolute':
             if absolute_smallest:
+                binary, key = smallest_rotation(i)
                 positions = binary_to_positions(binary)
                 absolute = positions[::-1] + '.'+key
             else:
@@ -169,6 +140,7 @@ def generate_symbols(list_of_chords, reduce_relative=False, truncate_relative=Fa
             output_list.append(absolute)
         elif style == 'actual':
             if absolute_smallest:
+                binary, key = smallest_rotation(i)
                 smallest = binary[::-1] + '.'+key
                 output_list.append(smallest)
             else:
@@ -202,7 +174,6 @@ def add_all_interval_variations_to_set(input_set, intervals, both_directions=Fal
 def filter_chords(set_of_chords, anti_set_of_chords, MODE = True):
     if MODE:
         def is_subset(subset, superset):
-            # print(subset, ' | ', superset , ' = ', subset)
             return (int(subset, 2) & int(superset, 2)) == int(superset, 2)
         filtered_chords = set()
         for chord in set_of_chords:
@@ -213,7 +184,6 @@ def filter_chords(set_of_chords, anti_set_of_chords, MODE = True):
         return filtered_chords
     else:
         def is_subset(subset, superset):
-            # print(subset, ' | ', superset , ' = ', subset)
             return (int(subset, 2) | int(superset, 2)) == int(superset, 2)
         filtered_chords = set()
         for chord in set_of_chords:
@@ -234,7 +204,7 @@ def rotate_by_step(binary_set, step_size):
 def prepare_set_of_chords(set_of_chords, edo, all_unique_binaries, specific_chords, rotations, interval_variations):
     # add all unique binaries of specific sizes
     set_of_chords.update(unique_binaries(edo, all_unique_binaries))
-    # # add specific chord shape (the indices can be found easily by checking the list above)
+    # add specific chord shapes
     for size, index in specific_chords:
         set_of_chords.add(unique_binaries(edo, size)[index])
     # rotate all chords in set by specific step sizes
@@ -267,11 +237,12 @@ def calculate_chord_counts(edo):
     return chord_counts
 
 def main():
-    REDUCE_RELATIVE = False
-    TRUNCATE_RELATIVE = False
-    ABSOLUTE_SMALLEST = False
+
+
     FILTER_MODE = False
+    INVERT_FILTER = False
     REDUCE_FINAL_SET = False
+
 
     set_of_chords = set()
     set_of_chords = prepare_set_of_chords(set_of_chords, EDO, ALL_UNIQUE_BINARIES1, SPECIFIC_CHORDS1, ROTATIONS1, INTERVAL_VARIATIONS1)
@@ -279,7 +250,12 @@ def main():
     anti_set_of_chords = set()
     anti_set_of_chords = prepare_set_of_chords(anti_set_of_chords, EDO, ALL_UNIQUE_BINARIES2, SPECIFIC_CHORDS2, ROTATIONS2, INTERVAL_VARIATIONS2)
 
-    final_set_of_chords = filter_chords(set_of_chords, anti_set_of_chords, FILTER_MODE)
+    if INVERT_FILTER:
+        A = set_of_chords
+        B = filter_chords(set_of_chords, anti_set_of_chords, FILTER_MODE)
+        final_set_of_chords = A - B if A != B else A
+    else:
+        final_set_of_chords = filter_chords(set_of_chords, anti_set_of_chords, FILTER_MODE)
 
     if REDUCE_FINAL_SET:
         final_chords = set()
@@ -289,34 +265,8 @@ def main():
     else:
         final_chords = final_set_of_chords
 
-    # try:
-    #     print('include')
-    #     print_symbols(set_of_chords,
-    #                 reduce_relative=REDUCE_RELATIVE,
-    #                 truncate_relative=TRUNCATE_RELATIVE,
-    #                 absolute_smallest=ABSOLUTE_SMALLEST)
-    # except:
-    #     print('\tNone')
-    # try:
-    #     print('exclude')
-    #     print_symbols(anti_set_of_chords,
-    #                 reduce_relative=REDUCE_RELATIVE,
-    #                 truncate_relative=TRUNCATE_RELATIVE,
-    #                 absolute_smallest=ABSOLUTE_SMALLEST)
-    # except:
-    #     print('\tNone')
     try:
-        # print('final')
-        # print_symbols(final_set_of_chords,
-        #             reduce_relative=REDUCE_RELATIVE,
-        #             truncate_relative=TRUNCATE_RELATIVE,
-        #             absolute_smallest=ABSOLUTE_SMALLEST)
-        # print()
-        symbols = generate_symbols(final_chords,
-                    reduce_relative=REDUCE_RELATIVE,
-                    truncate_relative=TRUNCATE_RELATIVE,
-                    absolute_smallest=ABSOLUTE_SMALLEST,
-                    style='actual')
+        symbols = generate_symbols(final_chords, style='actual')
         with open("symbols.py", "w") as f:
             f.write(f"SYMBOLS = {symbols}\n")
     except:
@@ -405,6 +355,14 @@ binaries get played as sine waves when clicked
 ability to go beyond neckalces and do all voices
 
 
+make base62 labels for the binary number column, or have the selectors line up vertically with the binary display.
+
+
+
+put the NOT rows directly below their corresponding upper rows, eliminating the need for doubled labels.
+
+
+
 Instead of throwing the error below, make the code work for 1 edo and 0 edo.
 for 1 edo:
    - delete the "interval varitions", and "NOT interval variations" rows
@@ -431,3 +389,67 @@ Traceback (most recent call last):
 ZeroDivisionError: integer division or modulo by zero
 
 '''
+
+
+
+# def print_symbols(list_of_chords, reduce_relative=False, truncate_relative=False, absolute_smallest=True):
+#     list_of_chords = sorted(list_of_chords, key=lambda x: int(x, 2))
+#     A = len(list_of_chords[0])+2, 14
+#     s = [' '*len(str(len(list_of_chords))), ' '*(A[0]-len('actual')),' '*(A[0]-len('smallest')),' '*(A[1]-len('absol')),' '*(A[1]-len('rel'))]
+#     print(f'i{s[0]}actual{s[1]}smallest{s[2]}absol{s[3]}rel')
+#     for e, i in enumerate(list_of_chords):
+#         # e += 1
+#         binary, key = smallest_rotation(i)
+#         if absolute_smallest:
+#             positions = binary_to_positions(binary)
+#             absolute = positions[::-1] + '.'+key
+#         else:
+#             positions = binary_to_positions(i)
+#             absolute = positions[::-1]
+#         gaps = binary_to_gap_lengths(binary, reduce_relative)
+
+#         actual = i[::-1]
+#         smallest = binary[::-1]
+        
+#         realtive = (gaps[::-1][:-1] if truncate_relative else gaps[::-1]) + '.'+key
+#         key = key
+
+#         s = [' '*(len(str(len(list_of_chords)))-len(str(e))),' '*(A[0]-len(actual)),' '*(A[0]-len(smallest)),' '*(A[1]-len(absolute)),' '*(A[1]-len(realtive))]
+#         print(f"{e} {s[0]}{actual}{s[1]}{smallest}{s[2]}{absolute}{s[3]}{realtive}{s[4]}")
+
+
+
+
+
+    # # REDUCE_RELATIVE = False
+    # # TRUNCATE_RELATIVE = False
+    # # ABSOLUTE_SMALLEST = False
+
+    # # try:
+    # #     print('include')
+    # #     print_symbols(set_of_chords,
+    # #                 reduce_relative=REDUCE_RELATIVE,
+    # #                 truncate_relative=TRUNCATE_RELATIVE,
+    # #                 absolute_smallest=ABSOLUTE_SMALLEST)
+    # # except:
+    # #     print('\tNone')
+    # # try:
+    # #     print('exclude')
+    # #     print_symbols(anti_set_of_chords,
+    # #                 reduce_relative=REDUCE_RELATIVE,
+    # #                 truncate_relative=TRUNCATE_RELATIVE,
+    # #                 absolute_smallest=ABSOLUTE_SMALLEST)
+    # # except:
+    # #     print('\tNone')
+    # try:
+    #     # print('final')
+    #     # print_symbols(final_set_of_chords,
+    #     #             reduce_relative=REDUCE_RELATIVE,
+    #     #             truncate_relative=TRUNCATE_RELATIVE,
+    #     #             absolute_smallest=ABSOLUTE_SMALLEST)
+    #     # print()
+    #     symbols = generate_symbols(final_chords, style='actual')
+    #     with open("symbols.py", "w") as f:
+    #         f.write(f"SYMBOLS = {symbols}\n")
+    # except:
+    #     print('None')

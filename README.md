@@ -1,6 +1,6 @@
 # edo graphs v0.2
 ![python](https://img.shields.io/badge/python-3.10-blue.svg)
-![repo size](https://img.shields.io/github/repo-size/mynvs/EDO-graphs)
+![repo size](https://img.shields.io/github/repo-size/mynvs/edo-graphs2-v0.2)
 
 ### installation
 
